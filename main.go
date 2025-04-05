@@ -12,9 +12,14 @@ import (
 const coldWorkIndex = 1
 const riskAssIndex = 3
 const ceilingIndex = 4
+const cntToSat = 5
+const cntToSun = 6
+const cntToWeekAfter = 7
 
 const coldWork = "PTW_COLD"
 const validDateBegin = "S34"
+const validDateEnd = "AJ35"
+const closingDateCell = "AZ132"
 
 /*
   f.GetSheetList() --> []string
@@ -40,7 +45,10 @@ func main() {
 		}
 	}()
 	// Handle Date in Coldwork
-	nextMonday := getComingMonday(f)
+	//nextMonday := getComingMonday(f)
+	nextMonday := dateHandler(f)
+	fmt.Println(nextMonday)
+
 	/* TODO
 	getComingMonday function should handle more than what it does now.
 	right now it just gets the date for incoming Monday but that's not enough.
@@ -92,17 +100,53 @@ func main() {
 
 }
 
-func getComingMonday(f *excelize.File) string {
-	/* This function returns the date of coming Monday as string in "mm/dd" form */
+//func getComingMonday(f *excelize.File) string {
+//	/* This function returns the date of coming Monday as string in "mm/dd" form */
+//	localnow := time.Now()
+//	weekday := int(time.Now().Weekday())
+//	dateToMonday := 7 - weekday + 1
+//
+//	// AddDate with dateToMondy in third argument should return coming Monday's Date
+//	// It will be returning as string with the date format : mm/dd
+//	// 01 represents month / 02 represents date
+//	return localnow.AddDate(0, 0, dateToMonday).Format("01/02")
+//
+//}
+func dateHandler(f *excelize.File) int {
+	/*
+	1. get the next monday
+	2. define week data structure ( string -> string  (day -> date))
+	3. 
+	*/
+	fmt.Println("Now just test for this function and will just end program")
+	var daysInCells = [6]string{"BA103", "BA105","BA107", "BX103","BX105", "BX107"}
+
 	localnow := time.Now()
-	weekday := int(time.Now().Weekday())
+	weekday := int(localnow.Weekday())
 	dateToMonday := 7 - weekday + 1
+	validFrom := localnow.AddDate(0,0,dateToMonday).Format("01/02")
+	validUntil := localnow.AddDate(0,0,dateToMonday + cntToSat).Format("01/02")
+	closingDate := localnow.AddDate(0,0,dateToMonday + cntToWeekAfter).Format("01/02")
+	
+	// Cells that need to be writeen :
+	// date for wokr permit begin 
+	// date for work permit ends
+	// date for work permit that should be signed
+	// date for work permit closing date
+	for i := 0; i<len(daysInCells); i++ {
+		//fmt.Println(localnow.AddDate(0,0,dateToMonday+i).Format("01/02"))
+		f.SetCellValue(coldWork, daysInCells[i], localnow.AddDate(0,0,dateToMonday+i).Format("01/02"))
 
-	// AddDate with dateToMondy in third argument should return coming Monday's Date
-	// It will be returning as string with the date format : mm/dd
-	// 01 represents month / 02 represents date
-	return localnow.AddDate(0, 0, dateToMonday).Format("01/02")
+	}
+	f.SetCellValue(coldWork, validDateBegin, validFrom)
+	f.SetCellValue(coldWork, validDateEnd, validUntil)
+	f.SetCellValue(coldWork, closingDateCell, closingDate)
+	f.Save()
 
+	fmt.Println(" Ending Program ....")
+	os.Exit(0)
+	return 0
+	
 }
 
 func cold_handler(f *excelize.File, i int, row []string) {
