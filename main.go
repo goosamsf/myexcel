@@ -21,15 +21,6 @@ const validDateBegin = "S34"
 const validDateEnd = "AJ35"
 const closingDateCell = "AZ132"
 
-/*
-  f.GetSheetList() --> []string
-	f.DeleteSheet(string) --> void
-
-
-
-
-
-*/
 
 func main() {
 	/* Open Excel File */
@@ -44,34 +35,18 @@ func main() {
 			fmt.Println(err)
 		}
 	}()
+
 	// Handle Date in Coldwork
-	//nextMonday := getComingMonday(f)
 	nextMonday := dateHandler(f)
 	fmt.Println(nextMonday)
 
-	/* TODO
-	getComingMonday function should handle more than what it does now.
-	right now it just gets the date for incoming Monday but that's not enough.
-	it should also know that following dates:
-		- date for closing                 --> validDateBegin + WeekAfter
-		- date for daily signed ( 6days)   --> validDateBegin + 1,2,3, ... 6
-		- date for signed ( in step 1,2,3) --> validDateBegin - 4
-
-	Then it should be manually embedded into the right cells so that I don't
-	have to worry about cell'style and go with given style.
-
-	*/
-
 	f.Save()
-	
 
 	index, _ := f.NewSheet("NewSheet2")
 	err = f.CopySheet(2, index)
 	if err != nil {
 		fmt.Println("CopySheet error:", err)
 	}
-
-	//prog_terminator()
 
 	rows, err := f.GetRows("Work Location")
 	rows = rows[1:]
