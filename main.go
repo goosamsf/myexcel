@@ -63,14 +63,15 @@ func main() {
 	*/
 
 	f.Save()
-	os.Exit(0)
+	
 
 	index, _ := f.NewSheet("NewSheet2")
 	err = f.CopySheet(2, index)
 	if err != nil {
 		fmt.Println("CopySheet error:", err)
 	}
-	os.Exit(1)
+
+	//prog_terminator()
 
 	rows, err := f.GetRows("Work Location")
 	rows = rows[1:]
@@ -100,53 +101,51 @@ func main() {
 
 }
 
-//func getComingMonday(f *excelize.File) string {
-//	/* This function returns the date of coming Monday as string in "mm/dd" form */
-//	localnow := time.Now()
-//	weekday := int(time.Now().Weekday())
-//	dateToMonday := 7 - weekday + 1
-//
-//	// AddDate with dateToMondy in third argument should return coming Monday's Date
-//	// It will be returning as string with the date format : mm/dd
-//	// 01 represents month / 02 represents date
-//	return localnow.AddDate(0, 0, dateToMonday).Format("01/02")
-//
-//}
 func dateHandler(f *excelize.File) int {
-	/*
-	1. get the next monday
-	2. define week data structure ( string -> string  (day -> date))
-	3. 
-	*/
-	fmt.Println("Now just test for this function and will just end program")
-	var daysInCells = [6]string{"BA103", "BA105","BA107", "BX103","BX105", "BX107"}
+	/* This functon handles all the dates in the excel file
+		 date should be written in following cells:
+		 - Valid Date Begin & End
+		 - Date for Approval & Issue
+		 - Date for Daily Inspection 
+	 */
+	var dateArray [6]string
+	
+	// Cell Location for Approval & Issue
+	var appAndIssue = [4]string{"BG65", "BG70", "BG75", "BG80"}
 
+	// Cell Location for Daily Inspections
+	var dailyInspection = [6]string{"BA103", "BA105","BA107", "BX103","BX105", "BX107"}
+
+	// Get current time.
 	localnow := time.Now()
 	weekday := int(localnow.Weekday())
+
+	// Get #Days to the coming Monday
 	dateToMonday := 7 - weekday + 1
+
 	validFrom := localnow.AddDate(0,0,dateToMonday).Format("01/02")
 	validUntil := localnow.AddDate(0,0,dateToMonday + cntToSat).Format("01/02")
 	closingDate := localnow.AddDate(0,0,dateToMonday + cntToWeekAfter).Format("01/02")
-	
-	// Cells that need to be writeen :
-	// date for wokr permit begin 
-	// date for work permit ends
-	// date for work permit that should be signed
-	// date for work permit closing date
-	for i := 0; i<len(daysInCells); i++ {
-		//fmt.Println(localnow.AddDate(0,0,dateToMonday+i).Format("01/02"))
-		f.SetCellValue(coldWork, daysInCells[i], localnow.AddDate(0,0,dateToMonday+i).Format("01/02"))
+	dateForSign := localnow.AddDate(0,0,dateToMonday-4).Format("01/02")
 
+	for i := 0; i<len(dailyInspection); i++ {
+	// Date that should be written in Daily Inspection
+		dateArray[i] = localnow.AddDate(0,0,dateToMonday+i).Format("01/02")
+		f.SetCellValue(coldWork, dailyInspection[i], dateArray[i])
 	}
+
+	for i:= 0; i < len(appAndIssue); i++ {
+	// Date that should be written in Approval & Issue
+		f.SetCellValue(coldWork, appAndIssue[i], dateForSign)
+	}
+
+	// Write 
 	f.SetCellValue(coldWork, validDateBegin, validFrom)
 	f.SetCellValue(coldWork, validDateEnd, validUntil)
 	f.SetCellValue(coldWork, closingDateCell, closingDate)
 	f.Save()
 
-	fmt.Println(" Ending Program ....")
-	os.Exit(0)
 	return 0
-	
 }
 
 func cold_handler(f *excelize.File, i int, row []string) {
@@ -167,4 +166,9 @@ func read_field_names(f *excelize.File) {
 
 	return
 
+}
+
+func prog_terminator() {
+	fmt.Println("Terminating Program...")
+	os.Exit(1)
 }
