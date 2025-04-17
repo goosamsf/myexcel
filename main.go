@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"reflect"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -21,6 +22,17 @@ const validDateBegin = "S34"
 const validDateEnd = "AJ35"
 const closingDateCell = "AZ132"
 
+const (
+	workLocation int = iota
+	needbit
+	ceilingbit
+	elec_certbit
+	workDesc_1
+	workDesc_2
+	tool_used
+)
+
+var glob_cw int
 
 func main() {
 	/* Open Excel File */
@@ -29,6 +41,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
 
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -40,16 +53,16 @@ func main() {
 	nextMonday := dateHandler(f)
 	fmt.Println(nextMonday)
 
+	// Save What has been Done
 	f.Save()
 
-	index, _ := f.NewSheet("NewSheet2")
-	err = f.CopySheet(2, index)
-	if err != nil {
-		fmt.Println("CopySheet error:", err)
-	}
 
 	rows, err := f.GetRows("Work Location")
 	rows = rows[1:]
+	fmt.Println("Type of rows:", reflect.TypeOf(rows))
+	
+	//prog_terminator()
+
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -72,6 +85,7 @@ func main() {
 		if i == 5 {
 			break
 		}
+		prog_terminator()
 	}
 
 }
@@ -93,6 +107,12 @@ func dateHandler(f *excelize.File) int {
 
 	// Get current time.
 	localnow := time.Now()
+
+	// ----  Warning Global Variable is used
+	_ , cw := localnow.ISOWeek()
+	glob_cw = cw+1
+	// Gloval Variable warning ----
+
 	weekday := int(localnow.Weekday())
 
 	// Get #Days to the coming Monday
@@ -131,6 +151,15 @@ func cold_handler(f *excelize.File, i int, row []string) {
 		3. Work Location
 		4. Work Description
 	*/
+	// what is the name of the sheet it should be?
+	
+
+	index, _ := f.NewSheet("NewSheet2")
+	err := f.CopySheet(2, index)
+	if err != nil {
+		fmt.Println("CopySheet error:", err)
+	}
+	f.Save()
 }
 
 func read_field_names(f *excelize.File) {
@@ -147,3 +176,10 @@ func prog_terminator() {
 	fmt.Println("Terminating Program...")
 	os.Exit(1)
 }
+
+
+func tester_GetRows(rows [][]string) {
+	fmt.Println(rows)
+	prog_terminator()
+}
+
