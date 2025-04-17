@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 	"reflect"
+	"strconv"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -18,29 +19,45 @@ const cntToSun = 6
 const cntToWeekAfter = 7
 
 const coldWork = "PTW_COLD"
+const ceilingWork = "Above Ceiling"
+const riskAssessment = "Risk Assessment"
+
 const validDateBegin = "S34"
 const validDateEnd = "AJ35"
 const closingDateCell = "AZ132"
-
 const (
+	// This name is used to access each row's column
 	workLocation int = iota
-	needbit
-	ceilingbit
-	elec_certbit
+	needBit
+	ceilingBit
+	elec_certBit
 	workDesc_1
 	workDesc_2
-	tool_used
+	toolUsed
+	ra_workDesc
+	haz_1
+	mit_1
+	haz_2
+	mit_2
+	haz_3
+	mit_3
 )
 
 var glob_cw int
 
 func main() {
+	// VAR
+	i := 1
+
 	/* Open Excel File */
-	f, err := excelize.OpenFile("PTW_templates.xlsx")
+	f, err := excelize.OpenFile("/Users/jun/golang/myexcel/PTW_templates.xlsx")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	// Reseting Template 
+  //sheetList := f.GetSheetList()
+  //resetTemplate(f ,sheetList)
 
 
 	defer func() {
@@ -49,7 +66,7 @@ func main() {
 		}
 	}()
 
-	// Handle Date in Coldwork
+	// Handle Date in Coldwork / Ceiling / Risk Assessment
 	nextMonday := dateHandler(f)
 	fmt.Println(nextMonday)
 
@@ -69,25 +86,44 @@ func main() {
 	}
 	/* Iterate over entire row */
 	/* Main Loop */
-	for i, row := range rows {
-		// i is index  : int
-		// row is current row : []string
-		//fmt.Printf("Type of _row_ : %T\n",row)
-		//fmt.Printf("Laying out %dth row\n",i)
-
-		// put together name
-		cold_handler(f, i, row)
-		// Handle ptw_cold
-		// Handle Risk Assessment
-		// Handle CEILING
-		// Handle
-
-		if i == 5 {
-			break
+	for _ , row := range rows {
+		
+		if row[needBit] == "0" {
+			continue
 		}
-		prog_terminator()
-	}
 
+		// COLD WORK HANDLER ( MOST OF THE WORK DONE HERE ) 
+		cold_handler(f, i, row)
+		// ---------------------------------------------- //
+
+		if row[ceilingBit] == "1" {
+			// If ceiling is needed it handles ceiling 
+			fmt.Println("Ceiling work begins ")
+			ceilingHandler(f,i, row)
+		}
+
+		i += 1
+
+	}
+	fmt.Println("PTW Generate Processing Done.")
+	fmt.Println(i)
+
+}
+
+func ceilingHandler(f *excelize.File, i int , row []string) {
+	// Ceiling Handler 
+	sheetName := row[workLocation]
+
+	workLoc := sheetName
+	sheetName = sheetName[:4] + strconv.Itoa(i) 
+	sheetName = "CEIL_" + sheetName
+	index, _ := f.NewSheet(sheetName)
+	err := f.CopySheet(ceilingIndex, index) 
+	if err != nil {
+		fmt.Println("CopySheet error:", err)
+	}
+	f.SetCellValue(sheetName, "D13",workLoc )
+	f.Save()
 }
 
 func dateHandler(f *excelize.File) int {
@@ -134,10 +170,23 @@ func dateHandler(f *excelize.File) int {
 		f.SetCellValue(coldWork, appAndIssue[i], dateForSign)
 	}
 
-	// Write 
+	/* --- PTW COLD --- */ 
 	f.SetCellValue(coldWork, validDateBegin, validFrom)
 	f.SetCellValue(coldWork, validDateEnd, validUntil)
 	f.SetCellValue(coldWork, closingDateCell, closingDate)
+
+	/* --- Ceiling Work --- */
+	f.SetCellValue(ceilingWork, "D10" ,dateForSign)    	// Application Date 
+	f.SetCellValue(ceilingWork, "L10" ,validFrom) 		 	// Valid Date begin
+	f.SetCellValue(ceilingWork, "U10" ,validUntil) 		 	// Valid Date end
+	f.SetCellValue(ceilingWork, "W46" ,dateForSign )   	// HE Signature
+	f.SetCellValue(ceilingWork, "W56" ,dateForSign )   	// SHE Signature
+	f.SetCellValue(ceilingWork, "W63" ,validFrom) 			// Performing authority
+
+	/* --- Risk Assessment --- */
+	f.SetCellValue(riskAssessment, "D8" , validFrom)    // Performing authority
+
+
 	f.Save()
 
 	return 0
@@ -151,16 +200,78 @@ func cold_handler(f *excelize.File, i int, row []string) {
 		3. Work Location
 		4. Work Description
 	*/
-	// what is the name of the sheet it should be?
-	
 
-	index, _ := f.NewSheet("NewSheet2")
-	err := f.CopySheet(2, index)
+	// what is the name of the sheet it should be?
+	sheetName := row[workLocation]
+	sheetName = sheetName[:4] + strconv.Itoa(i) 
+
+	// what is the content that should be filled in permit registry number
+
+	index, _ := f.NewSheet(sheetName)
+	err := f.CopySheet(1, index) // 
 	if err != nil {
 		fmt.Println("CopySheet error:", err)
 	}
+
+	// The cell number for permit registry is AK9
+	permitRegistry := "SKCCUS_" + sheetName + "_CW" + strconv.Itoa(glob_cw)
+	permitRegCell := "AK9"
+
+	f.SetCellValue(sheetName, permitRegCell ,permitRegistry) // Permit Registry Number
+	f.SetCellValue(sheetName, "J22" , row[workLocation]) // Work Location 
+	f.SetCellValue(sheetName, "K24" , row[workDesc_1])   // Work Description 1
+	f.SetCellValue(sheetName, "K28" , row[workDesc_2]) 	 // Work Description 2
+	f.SetCellValue(sheetName, "Q31" , row[toolUsed]) 	   // Tool Used
 	f.Save()
+
+	ra_handler(f, permitRegistry, row, i)
+
 }
+
+
+func ra_handler(f *excelize.File , permitRegistry string , row []string, i int){
+	/* 	-- Function Description -- 
+		 This function handles risk assessmen sheet.
+		 First it create a sheet by copying risk assessment sheet. 
+		 Then, it fills out necessary cell such as permitRegistry no , work Area
+	*/
+	sheetName := row[workLocation]
+	sheetName = sheetName[:4] + strconv.Itoa(i) 
+	sheetName = "RA_" + sheetName
+	index, _ := f.NewSheet(sheetName)
+	err := f.CopySheet(riskAssIndex, index) 
+	if err != nil {
+		fmt.Println("CopySheet error:", err)
+	}
+
+	f.SetCellValue(sheetName , "E3", permitRegistry )
+	f.SetCellValue(sheetName , "D7", row[workLocation])
+	
+	ra_workDescCell := 21
+
+	for ind := 0; ind < 3; ind++ {
+		wd := "B"  //Cell Column for Work Description
+		wd = wd + strconv.Itoa(ra_workDescCell)
+
+		f.SetCellValue(sheetName, wd, row[ra_workDesc])
+		ra_workDescCell += 2
+	}
+
+	/* 		--- Risk Assessment Table Fill out --- */
+	f.SetCellValue(sheetName, "D21", row[haz_1])
+	f.SetCellValue(sheetName, "G21", row[mit_1])
+	f.SetCellValue(sheetName, "D23", row[haz_2])
+	f.SetCellValue(sheetName, "G23", row[mit_2])
+	f.SetCellValue(sheetName, "D25", row[haz_3])
+	f.SetCellValue(sheetName, "G25", row[mit_3])
+
+	/* If You need to write something more in riskassesment sheet 
+		 write it here */
+
+	f.Save()
+
+}
+
 
 func read_field_names(f *excelize.File) {
 	// create a map
@@ -178,8 +289,26 @@ func prog_terminator() {
 }
 
 
-func tester_GetRows(rows [][]string) {
-	fmt.Println(rows)
+func resetTemplate(f *excelize.File, sheetList []string) {
+	/* Reseting Template... */
+	if len(sheetList) <= 5 {
+		fmt.Println("Template is ready, no need to go further processing.. ")
+		prog_terminator()
+	}
+
+	fmt.Println("Reseting Template ...")
+
+	for i , item := range sheetList{
+		if i < 5 {
+			// Index UPTO 4 is used as template. 
+			continue
+		}
+		f.DeleteSheet(item)
+	}
+	fmt.Println("DONE.")
+	fmt.Println("You can now Generate next week's PTW / Good luck. ")
+	f.Save()
+
 	prog_terminator()
 }
 
