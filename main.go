@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"reflect"
+	_ "reflect"
 	"strconv"
 
 	"github.com/xuri/excelize/v2"
 )
 
 /* Constants */
+const FILEPATH = "/Users/jun/myproj/myexcel/PTW_templates.xlsx"
 const coldWorkIndex = 1
 const riskAssIndex = 3
 const ceilingIndex = 4
@@ -45,19 +46,27 @@ const (
 
 var glob_cw int
 
+/* -------------------------------------- */
+/* --					M 	A 	I		N						--- */
+/* -------------------------------------- */
 func main() {
 	// VAR
 	i := 1
+	ceil_cnt := 0
 
 	/* Open Excel File */
-	f, err := excelize.OpenFile("/Users/jun/golang/myexcel/PTW_templates.xlsx")
+	
+	f, err := excelize.OpenFile(FILEPATH)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
 	// Reseting Template 
-  //sheetList := f.GetSheetList()
-  //resetTemplate(f ,sheetList)
+  sheetList := f.GetSheetList()
+	if len(sheetList) > 5 {
+		resetTemplate(f ,sheetList)
+	}
 
 
 	defer func() {
@@ -66,31 +75,30 @@ func main() {
 		}
 	}()
 
-	// Handle Date in Coldwork / Ceiling / Risk Assessment
-	nextMonday := dateHandler(f)
-	fmt.Println(nextMonday)
+	/*  Handles Date in Coldwork / Ceiling / Risk Assessment */
+	dateHandler(f)
 
-	// Save What has been Done
+	/* Save What has been Done */
 	f.Save()
 
-
+	/* Get Rows */
 	rows, err := f.GetRows("Work Location")
 	rows = rows[1:]
-	fmt.Println("Type of rows:", reflect.TypeOf(rows))
 	
-	//prog_terminator()
-
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	fmt.Println(" ---- PROGRAM BEGIN ----")
 	/* Iterate over entire row */
-	/* Main Loop */
+				/* Main Loop */
 	for _ , row := range rows {
 		
 		if row[needBit] == "0" {
 			continue
 		}
+		fmt.Printf("PTW : %s..\n", row[workLocation])
 
 		// COLD WORK HANDLER ( MOST OF THE WORK DONE HERE ) 
 		cold_handler(f, i, row)
@@ -98,15 +106,17 @@ func main() {
 
 		if row[ceilingBit] == "1" {
 			// If ceiling is needed it handles ceiling 
-			fmt.Println("Ceiling work begins ")
 			ceilingHandler(f,i, row)
+			ceil_cnt += 1
 		}
 
 		i += 1
 
 	}
-	fmt.Println("PTW Generate Processing Done.")
-	fmt.Println(i)
+	fmt.Println(" ---- SUMMARY ---- ")
+	fmt.Printf("%d PTW(s): Done.\n", i)
+	fmt.Printf("%d RISK ASSESSMENT(s): Done.\n", i)
+	fmt.Printf("%d Ceiling PERMIT: Done.\n", ceil_cnt)
 
 }
 
