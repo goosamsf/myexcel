@@ -6,12 +6,15 @@ import (
 	"time"
 	_ "reflect"
 	"strconv"
+	"bufio"
+	"runtime"
 
 	"github.com/xuri/excelize/v2"
 )
 
 /* Constants */
-const FILEPATH = "/Users/jun/myproj/myexcel/PTW_templates.xlsx"
+const FILEMAC = "/PTW_templates.xlsx"
+const FILEWIN = "\\PTW_templates.xlsx"
 const coldWorkIndex = 1
 const riskAssIndex = 3
 const ceilingIndex = 4
@@ -51,12 +54,34 @@ var glob_cw int
 /* -------------------------------------- */
 func main() {
 	// VAR
+	initial_message()
+	press_enter_exit()
+
+	var template_path string
+	cwd , err := os.Getwd()
+	if err != nil {
+		fmt.Println("Err : ", err)
+		return
+	}
+	running := runtime.GOOS
+
+	/* 	-- OS CHECK -- */
+	switch running {
+	case "darwin":
+		// MAC OS
+		cwd = cwd + FILEMAC
+		template_path = cwd
+	case "windows":
+		// WINDOWS
+		cwd = cwd + FILEWIN
+		template_path = cwd
+	}
+
 	i := 1
 	ceil_cnt := 0
 
 	/* Open Excel File */
-	
-	f, err := excelize.OpenFile(FILEPATH)
+	f, err := excelize.OpenFile(template_path)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -117,6 +142,8 @@ func main() {
 	fmt.Printf("%d PTW(s): Done.\n", i)
 	fmt.Printf("%d RISK ASSESSMENT(s): Done.\n", i)
 	fmt.Printf("%d Ceiling PERMIT: Done.\n", ceil_cnt)
+
+	press_enter_exit()
 
 }
 
@@ -198,6 +225,7 @@ func dateHandler(f *excelize.File) int {
 
 
 	f.Save()
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 	return 0
 }
@@ -320,5 +348,34 @@ func resetTemplate(f *excelize.File, sheetList []string) {
 	f.Save()
 
 	prog_terminator()
+}
+
+func press_enter_exit() {
+	/* In Window Environment, this function is necessary 
+		otherwise user can't see any output and cmd windows is closed 
+	*/
+	fmt.Println("Press Enter to Exit...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	os.Exit(0)
+}
+
+func initial_message() {
+// ==============================================
+// This program belongs to ABC Corporation.
+// Unauthorized use, copying, or distribution
+// is strictly prohibited.
+// © 2025 ABC Corporation. All rights reserved.
+// ==============================================
+	fmt.Println("======================================================")
+	fmt.Println("This Property belongs to SK C&C USA Infra Department")
+	fmt.Println("Unauthorized use, copying, or distribution is strictly")
+	fmt.Println("prohibited")
+	fmt.Println("SK C&C USA Infra Department. All rights reserved.")
+	fmt.Println("======================================================")
+	fmt.Println("")
+	fmt.Println("Welcome to PTW Generator Program.")
+	fmt.Println("This program generates next week's PTW based on \"Work Location\" sheet in \"PTW_tempalte.xlsx\" ")
+	
+
 }
 
