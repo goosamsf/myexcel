@@ -360,12 +360,6 @@ func press_enter_exit() {
 }
 
 func initial_message() {
-// ==============================================
-// This program belongs to ABC Corporation.
-// Unauthorized use, copying, or distribution
-// is strictly prohibited.
-// © 2025 ABC Corporation. All rights reserved.
-// ==============================================
 	fmt.Println("======================================================")
 	fmt.Println("This Property belongs to SK C&C USA Infra Department")
 	fmt.Println("Unauthorized use, copying, or distribution is strictly")
@@ -375,7 +369,5 @@ func initial_message() {
 	fmt.Println("")
 	fmt.Println("Welcome to PTW Generator Program.")
 	fmt.Println("This program generates next week's PTW based on \"Work Location\" sheet in \"PTW_tempalte.xlsx\" ")
-	
-
 }
 
