@@ -8,13 +8,17 @@ import (
 	"strconv"
 	"bufio"
 	"runtime"
+	"strings"
 
 	"github.com/xuri/excelize/v2"
+	"golang.org/x/term"
+	"golang.org/x/crypto/bcrypt"
 )
 
 /* Constants */
 const FILEMAC = "/PTW_templates.xlsx"
 const FILEWIN = "\\PTW_templates.xlsx"
+const PASSWD = "$2a$10$SUDQmJzF0CZKxH8YDfomg.5BwVa2yYy7jYv6qMm84Ntgc1Ynya4bO"
 const coldWorkIndex = 1
 const riskAssIndex = 3
 const ceilingIndex = 4
@@ -54,10 +58,11 @@ var glob_cw int
 /* -------------------------------------- */
 func main() {
 	// VAR
-	initial_message()
-	press_enter_exit()
-
+	if initial_message(PASSWD) == 1 {
+		press_enter_exit()
+	}
 	var template_path string
+
 	cwd , err := os.Getwd()
 	if err != nil {
 		fmt.Println("Err : ", err)
@@ -86,14 +91,20 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	sheetList := f.GetSheetList()
 
-	// Reseting Template 
-  sheetList := f.GetSheetList()
-	if len(sheetList) > 5 {
-		resetTemplate(f ,sheetList)
+	switch chooseOption(){
+	case 1:
+		resetTemplate(f,sheetList)
+	case 2:
+		fmt.Println("Process Begin...")
+	default:
+		press_enter_exit()
 	}
 
-
+	/* Get Requester Name */
+	requesterNameHandler(f)
+	
 	defer func() {
 		if err := f.Close(); err != nil {
 			fmt.Println(err)
@@ -134,7 +145,6 @@ func main() {
 			ceilingHandler(f,i, row)
 			ceil_cnt += 1
 		}
-
 		i += 1
 
 	}
@@ -143,14 +153,17 @@ func main() {
 	fmt.Printf("%d RISK ASSESSMENT(s): Done.\n", i)
 	fmt.Printf("%d Ceiling PERMIT: Done.\n", ceil_cnt)
 
-	press_enter_exit()
-
+	fmt.Println("ALL WORK DONE. Program Gracefully TERMINATE")
+	fmt.Println("Thank YOU")
 }
 
 func ceilingHandler(f *excelize.File, i int , row []string) {
-	// Ceiling Handler 
+	/* This function handles Ceiling Permit
+		 First Generates the new sheet by copying template file 
+		 and fill out necessary part with right value
+	*/
+	
 	sheetName := row[workLocation]
-
 	workLoc := sheetName
 	sheetName = sheetName[:4] + strconv.Itoa(i) 
 	sheetName = "CEIL_" + sheetName
@@ -160,7 +173,23 @@ func ceilingHandler(f *excelize.File, i int , row []string) {
 		fmt.Println("CopySheet error:", err)
 	}
 	f.SetCellValue(sheetName, "D13",workLoc )
+	/* SAVE */
 	f.Save()
+}
+
+func requesterNameHandler(f *excelize.File) {
+	/*   This function handles to fill out the requester name in right
+	  	 location 
+	*/
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Type Requester Name: ")
+	requesterName, _ := reader.ReadString('\n')
+	requesterName = strings.TrimSpace(requesterName)
+
+	f.SetCellValue(coldWork , "J43", requesterName)
+	f.SetCellValue(coldWork , "CA65", requesterName)
+	f.Save()
+	fmt.Println("Press Enter to Proceed. ")
 }
 
 func dateHandler(f *excelize.File) int {
@@ -232,18 +261,10 @@ func dateHandler(f *excelize.File) int {
 
 func cold_handler(f *excelize.File, i int, row []string) {
 	/* Generate sheet that contains cold ptw */
-	/*
-		1. Create empty sheet
-		2. copy ptw work to the empty sheet
-		3. Work Location
-		4. Work Description
-	*/
 
 	// what is the name of the sheet it should be?
 	sheetName := row[workLocation]
 	sheetName = sheetName[:4] + strconv.Itoa(i) 
-
-	// what is the content that should be filled in permit registry number
 
 	index, _ := f.NewSheet(sheetName)
 	err := f.CopySheet(1, index) // 
@@ -310,27 +331,17 @@ func ra_handler(f *excelize.File , permitRegistry string , row []string, i int){
 
 }
 
-
-func read_field_names(f *excelize.File) {
-	// create a map
-
-	// find a way to iterate over first column until
-	// value is null
-
-	return
-
-}
-
 func prog_terminator() {
 	fmt.Println("Terminating Program...")
-	os.Exit(1)
+	os.Exit(0)
 }
 
 
 func resetTemplate(f *excelize.File, sheetList []string) {
 	/* Reseting Template... */
 	if len(sheetList) <= 5 {
-		fmt.Println("Template is ready, no need to go further processing.. ")
+		fmt.Println("Template is already ready to process..  ")
+		fmt.Println("Restart the program and Go ahead with Option 2...")
 		prog_terminator()
 	}
 
@@ -345,9 +356,10 @@ func resetTemplate(f *excelize.File, sheetList []string) {
 	}
 	fmt.Println("DONE.")
 	fmt.Println("You can now Generate next week's PTW / Good luck. ")
+	fmt.Println("Restart the program and Go ahead with Option 2...")
 	f.Save()
 
-	prog_terminator()
+	press_enter_exit()
 }
 
 func press_enter_exit() {
@@ -359,7 +371,8 @@ func press_enter_exit() {
 	os.Exit(0)
 }
 
-func initial_message() {
+func initial_message(pwcheck string) int {
+
 	fmt.Println("======================================================")
 	fmt.Println("This Property belongs to SK C&C USA Infra Department")
 	fmt.Println("Unauthorized use, copying, or distribution is strictly")
@@ -367,7 +380,47 @@ func initial_message() {
 	fmt.Println("SK C&C USA Infra Department. All rights reserved.")
 	fmt.Println("======================================================")
 	fmt.Println("")
+
+	fmt.Print("Password: ")
+	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		fmt.Println("\nError reading password:")
+		press_enter_exit()
+	}
+	fmt.Println("Password Received, Validating User... ")
+	userInput := string(bytePassword)	
+
+	err = bcrypt.CompareHashAndPassword([]byte(pwcheck), []byte(userInput))		
+	if err != nil {
+		/* WRONG PASSWORD */ 
+		fmt.Println("Failed to validate the PASSWORD( hint : m5 )")
+		return 1	
+	}else {
+		fmt.Println("Successfully Validated")	
+	}
+
 	fmt.Println("Welcome to PTW Generator Program.")
 	fmt.Println("This program generates next week's PTW based on \"Work Location\" sheet in \"PTW_tempalte.xlsx\" ")
+	return 0
 }
 
+func chooseOption() int {
+	reader := bufio.NewReader(os.Stdin) 
+		 fmt.Print(`
+===========================
+Choose an Option!
+---------------------------
+1. Reset Template 
+2. Start Generating PTW 
+3. Exit
+===========================
+`)
+	 input , _ := reader.ReadString('\n')
+	 input = strings.TrimSpace(input)
+	 inputNum , err := strconv.Atoi(input)
+	 if err != nil {
+		 fmt.Println("Invalid number input")
+		 press_enter_exit()
+	 }
+	 return inputNum
+}
