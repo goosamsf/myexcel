@@ -16,6 +16,10 @@ import (
 )
 
 /* Constants */
+const GENERATE = 2
+const RESET = 1
+const FILESTATUS = 0
+
 const FILEMAC = "/PTW_templates.xlsx"
 const FILEWIN = "\\PTW_templates.xlsx"
 const PASSWD = "$2a$10$SUDQmJzF0CZKxH8YDfomg.5BwVa2yYy7jYv6qMm84Ntgc1Ynya4bO"
@@ -93,14 +97,24 @@ func main() {
 	}
 	sheetList := f.GetSheetList()
 
-	switch chooseOption(){
-	case 1:
-		resetTemplate(f,sheetList)
-	case 2:
-		fmt.Println("Process Begin...")
-	default:
-		press_enter_exit()
-	}
+	for {
+		opt := chooseOption()
+		switch opt {
+		case FILESTATUS:
+			checkFileStatus(f)
+		case RESET:
+			resetTemplate(f,sheetList)
+		case GENERATE:
+			fmt.Println("Process Begin...")
+		default:
+			press_enter_exit()
+		}
+
+		if opt == 2 {
+			break
+		}
+
+	}	
 
 	/* Get Requester Name */
 	requesterNameHandler(f)
@@ -155,6 +169,7 @@ func main() {
 
 	fmt.Println("ALL WORK DONE. Program Gracefully TERMINATE")
 	fmt.Println("Thank YOU")
+	press_enter_exit()
 }
 
 func ceilingHandler(f *excelize.File, i int , row []string) {
@@ -342,7 +357,6 @@ func resetTemplate(f *excelize.File, sheetList []string) {
 	if len(sheetList) <= 5 {
 		fmt.Println("Template is already ready to process..  ")
 		fmt.Println("Restart the program and Go ahead with Option 2...")
-		prog_terminator()
 	}
 
 	fmt.Println("Reseting Template ...")
@@ -359,7 +373,6 @@ func resetTemplate(f *excelize.File, sheetList []string) {
 	fmt.Println("Restart the program and Go ahead with Option 2...")
 	f.Save()
 
-	press_enter_exit()
 }
 
 func press_enter_exit() {
@@ -407,13 +420,14 @@ func initial_message(pwcheck string) int {
 func chooseOption() int {
 	reader := bufio.NewReader(os.Stdin) 
 		 fmt.Print(`
-===========================
+===============================================
 Choose an Option!
----------------------------
-1. Reset Template 
-2. Start Generating PTW 
-3. Exit
-===========================
+----------------------------------------------
+0. File Status (생성가능여부 확인)
+1. Reset Template (엑셀 템플릿 리셋)
+2. Start Generating PTW (작업허가서 생성시작)
+3. Exit (종료)
+===============================================
 `)
 	 input , _ := reader.ReadString('\n')
 	 input = strings.TrimSpace(input)
@@ -423,4 +437,17 @@ Choose an Option!
 		 press_enter_exit()
 	 }
 	 return inputNum
+}
+
+func checkFileStatus(f *excelize.File) {
+	sheetList := f.GetSheetList()
+	if len(sheetList) == 5 {
+		fmt.Println(" SHHET 초기화 상태 확인")
+		fmt.Println(" 2번으로 작업허가서 생성 시작요망")
+	}else {
+		fmt.Println(" SHEET 초기화 필요 ")
+		fmt.Println(" 1번으로 SHEET 리셋 요망")
+	}
+	fmt.Println("Press Enter to Proceed...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
