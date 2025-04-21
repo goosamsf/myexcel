@@ -371,6 +371,11 @@ func resetTemplate(f *excelize.File, sheetList []string) {
 	fmt.Println("DONE.")
 	fmt.Println("You can now Generate next week's PTW / Good luck. ")
 	fmt.Println("Restart the program and Go ahead with Option 2...")
+	fmt.Println("시트 초기화 처리 완료.")
+	fmt.Println("2번으로 생성 진행요망.")
+
+	fmt.Println("Press Enter to Proceed...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 	f.Save()
 
 }
